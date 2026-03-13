@@ -23,7 +23,7 @@ A lightweight Docker container that automates [Immich](https://immich.app/) back
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git clone https://github.com/pwlgrzs/immich_backup.git
 cd YOUR_REPO
 ```
 
@@ -88,7 +88,7 @@ borg extract $BACKUP_PATH/immich-borg::ARCHIVE_NAME
 Pre-built images are available via GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/YOUR_USERNAME/YOUR_REPO:main
+docker pull ghcr.io/pwlgrzs/immich_backup
 ```
 
 ## What Is Backed Up
