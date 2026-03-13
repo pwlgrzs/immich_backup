@@ -1,0 +1,10 @@
+services:
+  immich-backup:
+    build: .
+    container_name: immich-backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ${UPLOAD_LOCATION}:${UPLOAD_LOCATION}
+      - ${BACKUP_PATH}:${BACKUP_PATH}
