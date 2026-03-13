@@ -152,7 +152,7 @@ Notifications are optional — if either variable is missing from `.env`, the ba
 
 **Success:**
 ```
-✅ Immich Backup Successful
+Immich Backup Successful
 
 Archive: 2026-03-13T16:00:01
 DB dump size: 244M
@@ -162,7 +162,7 @@ Time: Fri Mar 13 16:05:13 UTC 2026
 
 **Failure:**
 ```
-❌ Immich Backup FAILED
+Immich Backup FAILED
 
 Failed at: pg_dump ...
 Duration: 8s
