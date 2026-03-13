@@ -87,6 +87,7 @@ fi
 # Prune old archives
 echo "[$(date)] Pruning Borg archives..."
 borg prune \
+    --keep-daily=7 \
     --keep-weekly=4 \
     --keep-monthly=3 \
     "${BACKUP_PATH}/immich-borg"
