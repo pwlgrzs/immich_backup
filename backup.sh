@@ -12,7 +12,7 @@ trap 'FAILED_STEP="${BASH_COMMAND}"; \
     END_TIME=$(date +%s); \
     DURATION=$((END_TIME - START_TIME)); \
     echo "[$(date)] ERROR: Backup failed at step: ${FAILED_STEP}"; \
-    telegram_notify "$(printf "<b>? Immich Backup FAILED</b>\n\n<b>Failed at:</b> <code>%s</code>\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
+    telegram_notify "$(printf "<b>❌ Immich Backup FAILED</b>\n\n<b>Failed at:</b> <code>%s</code>\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
         "${FAILED_STEP}" "${DURATION}" "$(date)")"; \
     exit 1' ERR
 
@@ -101,7 +101,7 @@ DURATION=$((END_TIME - START_TIME))
 echo "[$(date)] Backup finished successfully in ${DURATION}s."
 
 # Success notification
-telegram_notify "$(printf "<b>? Immich Backup Successful</b>\n\n<b>Archive:</b> <code>%s</code>\n<b>DB dump size:</b> %s\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
+telegram_notify "$(printf "<b>✅ Immich Backup Successful</b>\n\n<b>Archive:</b> <code>%s</code>\n<b>DB dump size:</b> %s\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
     "${LATEST_ARCHIVE}" \
     "${DB_SIZE}" \
     "${DURATION}" \
