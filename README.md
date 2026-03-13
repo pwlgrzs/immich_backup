@@ -131,6 +131,45 @@ docker pull ghcr.io/pwlgrzs/immich_backup:latest
 | `$UPLOAD_LOCATION/thumbs/` | :x: | Regeneratable by Immich |
 | `$UPLOAD_LOCATION/encoded-video/` | :x: | Regeneratable by Immich |
 
+## :speech_balloon: Telegram Notifications
+
+The backup container can send Telegram notifications on every backup run, including job duration, database dump size, archive name, and failure details with the exact failed step.
+
+### Setup
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram and run `/newbot` to create a bot — copy the token it provides
+2. Message [@userinfobot](https://t.me/userinfobot) to retrieve your personal chat ID
+3. Add both values to your `.env`:
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
+
+Notifications are optional — if either variable is missing from `.env`, the backup runs normally and silently skips the Telegram step.
+
+### Notification Examples
+
+**Success:**
+```
+✅ Immich Backup Successful
+
+Archive: 2026-03-13T16:00:01
+DB dump size: 244M
+Duration: 312s
+Time: Fri Mar 13 16:05:13 UTC 2026
+```
+
+**Failure:**
+```
+❌ Immich Backup FAILED
+
+Failed at: pg_dump ...
+Duration: 8s
+Time: Fri Mar 13 16:00:09 UTC 2026
+```
+
+
 ## License
 
 MIT
