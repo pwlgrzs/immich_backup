@@ -121,11 +121,6 @@ REPO_COMPRESSED=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $5, $6}
 REPO_DEDUP=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $7, $8}')
 ARCHIVE_COUNT=$(borg list --short "${BACKUP_PATH}/immich-borg" | wc -l | tr -d ' ')
 
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-
-echo "[$(date)] Backup finished successfully in ${DURATION}s."
-
 # Success notification
 telegram_notify "$(printf \
 "<b>✅ Immich Backup Successful</b>
