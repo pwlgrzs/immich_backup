@@ -55,17 +55,35 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-On first run, the Borg repository is initialized automatically at `$BACKUP_PATH/immich-borg` with `repokey-blake2` encryption.
+## :key: Borg Key Export
 
-### 4. :warning: Back up your Borg key
+Since `repokey-blake2` encryption is used, the key is embedded in the repository itself. You should still export it separately in case the repository gets corrupted. **Without both the key and the passphrase your backups are unrecoverable.**
 
-After the first run, immediately export and store your Borg repository key in a safe place. Without it, your backups cannot be decrypted:
+Run this after the first successful backup:
 
 ```bash
-docker compose exec immich-backup borg key export $BACKUP_PATH/immich-borg /tmp/immich-borg.key
+# Encrypted binary (most compact)
+docker compose exec immich-backup \
+    borg key export "${BACKUP_PATH}/immich-borg" /tmp/immich-borg-key.enc
+
+# Plain text / paper backup
+docker compose exec immich-backup \
+    borg key export --paper "${BACKUP_PATH}/immich-borg" /tmp/immich-borg-key.txt
+
+# QR code HTML (easy to print and scan)
+docker compose exec immich-backup \
+    borg key export --qr-html "${BACKUP_PATH}/immich-borg" /tmp/immich-borg-key.html
 ```
 
-Copy `/tmp/immich-borg.key` off the container to a safe location.
+Then copy the exported files from the container to your host:
+
+```bash
+docker cp immich-backup:/tmp/immich-borg-key.enc ./immich-borg-key.enc
+docker cp immich-backup:/tmp/immich-borg-key.txt ./immich-borg-key.txt
+docker cp immich-backup:/tmp/immich-borg-key.html ./immich-borg-key.html
+```
+
+Store these files — along with your `BORG_PASSPHRASE` — in a safe place **separate from the backup drive** (e.g. password manager, printed paper, secondary storage).
 
 ## Manual Backup
 
