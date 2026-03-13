@@ -1,6 +1,6 @@
 # immich-backup
 
-> ?? This project was created with AI assistance (Perplexity AI). Review all scripts before running in production.
+> ⚠️ This project was created with AI assistance (Perplexity AI). Review all scripts before running in production.
 
 A lightweight Docker container that automates [Immich](https://immich.app/) backups using `pg_dump` for the database and [BorgBackup](https://borgbackup.readthedocs.io/) for files. Built on Alpine Linux with `postgresql17-client` for full Immich DB compatibility.
 
@@ -95,10 +95,10 @@ docker pull ghcr.io/YOUR_USERNAME/YOUR_REPO:main
 
 | Path | Backed up | Reason |
 |---|---|---|
-| `$UPLOAD_LOCATION` (all files) | ? | Original uploads |
-| `$UPLOAD_LOCATION/database-backup/` | ? | DB dump included in borg |
-| `$UPLOAD_LOCATION/thumbs/` | ? | Regeneratable by Immich |
-| `$UPLOAD_LOCATION/encoded-video/` | ? | Regeneratable by Immich |
+| `$UPLOAD_LOCATION` (all files) | ✅ | Original uploads |
+| `$UPLOAD_LOCATION/database-backup/` | ✅ | DB dump included in borg |
+| `$UPLOAD_LOCATION/thumbs/` | ❌ | Regeneratable by Immich |
+| `$UPLOAD_LOCATION/encoded-video/` | ❌ | Regeneratable by Immich |
 
 ## License
 
