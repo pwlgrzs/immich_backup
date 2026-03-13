@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+export TZ="${TZ:-UTC}"
 
 # Export env vars for cron (dcron doesn't inherit them automatically)
 env | grep -E '^(DB_|UPLOAD_LOCATION|BACKUP_PATH)' > /etc/backup-env
