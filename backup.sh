@@ -114,9 +114,39 @@ DURATION=$((END_TIME - START_TIME))
 
 echo "[$(date)] Backup finished successfully in ${DURATION}s."
 
+# Gather repo stats for notification
+BORG_INFO=$(borg info "${BACKUP_PATH}/immich-borg" 2>&1)
+REPO_ORIGINAL=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $3, $4}')
+REPO_COMPRESSED=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $5, $6}')
+REPO_DEDUP=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $7, $8}')
+REPO_NUM_ARCHIVES=$(echo "$BORG_INFO" | grep "Number of files:" | awk '{print $NF}')
+ARCHIVE_COUNT=$(borg list --short "${BACKUP_PATH}/immich-borg" | wc -l)
+
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+echo "[$(date)] Backup finished successfully in ${DURATION}s."
+
 # Success notification
-telegram_notify "$(printf "<b>✅ Immich Backup Successful</b>\n\n<b>Archive:</b> <code>%s</code>\n<b>DB dump size:</b> %s\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
+telegram_notify "$(printf \
+"<b>✅ Immich Backup Successful</b>
+
+<b>Archive:</b> <code>%s</code>
+<b>DB dump size:</b> %s
+<b>Duration:</b> %ss
+
+<b>📦 Repository Stats</b>
+<b>Total archives:</b> %s
+<b>Original size:</b> %s
+<b>Compressed size:</b> %s
+<b>Deduplicated size:</b> %s
+
+<b>Time:</b> %s" \
     "${LATEST_ARCHIVE}" \
     "${DB_SIZE}" \
     "${DURATION}" \
+    "${ARCHIVE_COUNT}" \
+    "${REPO_ORIGINAL}" \
+    "${REPO_COMPRESSED}" \
+    "${REPO_DEDUP}" \
     "$(date)")"
