@@ -84,14 +84,27 @@ else
     exit 1
 fi
 
-# Prune old archives
-echo "[$(date)] Pruning Borg archives..."
-borg prune \
-    --keep-daily=7 \
-    --keep-weekly=4 \
-    --keep-monthly=3 \
-    "${BACKUP_PATH}/immich-borg"
+# Build prune arguments dynamically
+PRUNE_ARGS=""
 
+if [ "${KEEP_DAILY:-0}" -gt 0 ]; then
+    PRUNE_ARGS="$PRUNE_ARGS --keep-daily=${KEEP_DAILY}"
+fi
+
+if [ "${KEEP_WEEKLY:-0}" -gt 0 ]; then
+    PRUNE_ARGS="$PRUNE_ARGS --keep-weekly=${KEEP_WEEKLY}"
+fi
+
+if [ "${KEEP_MONTHLY:-0}" -gt 0 ]; then
+    PRUNE_ARGS="$PRUNE_ARGS --keep-monthly=${KEEP_MONTHLY}"
+fi
+
+if [ -z "$PRUNE_ARGS" ]; then
+    echo "[$(date)] WARNING: No prune rules defined, skipping prune step."
+else
+    echo "[$(date)] Pruning Borg archives (daily=${KEEP_DAILY:-0} weekly=${KEEP_WEEKLY:-0} monthly=${KEEP_MONTHLY:-0})..."
+    borg prune $PRUNE_ARGS "${BACKUP_PATH}/immich-borg"
+fi
 # Compact repository
 echo "[$(date)] Compacting Borg repository..."
 borg compact "${BACKUP_PATH}/immich-borg"
