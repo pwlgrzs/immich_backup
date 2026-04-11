@@ -10,9 +10,13 @@ RUN apk add --no-cache \
     shadow
 
 COPY backup.sh /usr/local/bin/backup.sh
+COPY db-only-backup.sh /usr/local/bin/db-only-backup.sh
 COPY notify.sh /usr/local/bin/notify.sh
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
-RUN chmod +x /usr/local/bin/backup.sh /usr/local/bin/notify.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/backup.sh \
+              /usr/local/bin/db-only-backup.sh \
+              /usr/local/bin/notify.sh \
+              /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
