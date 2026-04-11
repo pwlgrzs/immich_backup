@@ -6,7 +6,8 @@ RUN apk add --no-cache \
     dcron \
     bash \
     tzdata \
-    wget
+    wget \
+    shadow
 
 COPY backup.sh /usr/local/bin/backup.sh
 COPY notify.sh /usr/local/bin/notify.sh
