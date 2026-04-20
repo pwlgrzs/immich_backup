@@ -32,9 +32,15 @@ chmod 600 /etc/backup-env
 
 # Write crontab for the backup user
 mkdir -p /etc/crontabs
+# Clear any previous entry and write fresh
 echo "${CRON_SCHEDULE} . /etc/backup-env && /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1" \
     > "/etc/crontabs/${BACKUP_USER}"
+chmod 600 "/etc/crontabs/${BACKUP_USER}"
 chown "${PUID}:${PGID}" "/etc/crontabs/${BACKUP_USER}"
+
+# Verify the crontab was written correctly
+echo "Crontab contents:"
+cat "/etc/crontabs/${BACKUP_USER}"
 
 echo "Cron schedule set to: ${CRON_SCHEDULE}"
 echo "Starting cron daemon..."
