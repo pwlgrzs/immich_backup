@@ -46,5 +46,5 @@ echo "Cron schedule set to: ${CRON_SCHEDULE}"
 echo "Starting cron daemon..."
 
 touch /var/log/backup.log
-crond -f -l 8 &
+crond -f -l 6 &
 tail -f /var/log/backup.log
