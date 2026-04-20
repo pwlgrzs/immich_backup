@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# Apply timezone from TZ env var (passed via docker-compose .env)
+if [ -n "${TZ}" ]; then
+    cp "/usr/share/zoneinfo/${TZ}" /etc/localtime
+    echo "${TZ}" > /etc/timezone
+fi
+
 PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
