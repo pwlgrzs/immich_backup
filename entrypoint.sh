@@ -16,8 +16,6 @@ if ! getent passwd "${PUID}" > /dev/null 2>&1; then
     useradd -u "${PUID}" -g "${PGID}" -d /home/backupuser -s /bin/bash -M backupuser
 fi
 
-BACKUP_USER=$(getent passwd "${PUID}" | cut -d: -f1)
-
 # Ensure cache directory exists and is owned correctly
 mkdir -p /home/backupuser/.cache/borg
 chown -R "${PUID}:${PGID}" /home/backupuser/.cache/borg
@@ -27,20 +25,22 @@ touch /var/log/backup.log
 chown "${PUID}:${PGID}" /var/log/backup.log
 
 # Export env vars for cron
-env | grep -E '^(DB_|UPLOAD_LOCATION|BACKUP_PATH|BORG_|TZ|TELEGRAM_|KEEP_|PU)' > /etc/backup-env
+env | grep -E '^(DB_|UPLOAD_LOCATION|BACKUP_PATH|BORG_|TZ|TELEGRAM_|KEEP_|FULL_BACKUP)' > /etc/backup-env
 chmod 600 /etc/backup-env
 
-# Write crontab for the backup user
+# Always write crontab as root — Alpine dcron requires root-owned crontab files
+# The backup script itself uses PUID/PGID for filesystem access via su-exec
 mkdir -p /etc/crontabs
-# Clear any previous entry and write fresh
 echo "${CRON_SCHEDULE} . /etc/backup-env && /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1" \
-    > "/etc/crontabs/${BACKUP_USER}"
-chmod 600 "/etc/crontabs/${BACKUP_USER}"
-chown "${PUID}:${PGID}" "/etc/crontabs/${BACKUP_USER}"
+    > /etc/crontabs/root
+chmod 600 /etc/crontabs/root
+chown root:root /etc/crontabs/root
 
-# Verify the crontab was written correctly
+# Verify
 echo "Crontab contents:"
-cat "/etc/crontabs/${BACKUP_USER}"
+cat /etc/crontabs/root
+echo "Crontab ownership:"
+ls -la /etc/crontabs/root
 
 echo "Cron schedule set to: ${CRON_SCHEDULE}"
 echo "Starting cron daemon..."
