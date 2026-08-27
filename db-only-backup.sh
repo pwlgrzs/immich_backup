@@ -6,13 +6,25 @@ START_TIME=$(date +%s)
 
 source /usr/local/bin/notify.sh
 
-trap 'FAILED_STEP="${BASH_COMMAND}"; \
-    END_TIME=$(date +%s); \
-    DURATION=$((END_TIME - START_TIME)); \
-    echo "[$(date)] ERROR: Backup failed at step: ${FAILED_STEP}"; \
+FAILURE_NOTIFIED=0
+notify_failure() {
+    [ "${FAILURE_NOTIFIED}" -eq 1 ] && return
+    FAILURE_NOTIFIED=1
+    local failed_step="$1"
+    local now duration
+    now=$(date +%s)
+    duration=$((now - START_TIME))
+    echo "[$(date)] ERROR: Backup failed at step: ${failed_step}"
     telegram_notify "$(printf "<b>❌ Immich DB Backup FAILED</b>\n\n<b>Failed at:</b> <code>%s</code>\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
-        "${FAILED_STEP}" "${DURATION}" "$(date)")"; \
-    exit 1' ERR
+        "${failed_step}" "${duration}" "$(date)")"
+}
+
+fail() {
+    notify_failure "$1"
+    exit 1
+}
+
+trap 'notify_failure "${BASH_COMMAND}"; exit 1' ERR
 
 echo "[$(date)] Starting Immich database-only backup..."
 
@@ -29,8 +41,7 @@ PGPASSWORD="${DB_PASSWORD}" pg_dump \
     > "${UPLOAD_LOCATION}/database-backup/immich-database.sql"
 
 if [ ! -s "${UPLOAD_LOCATION}/database-backup/immich-database.sql" ]; then
-    echo "[$(date)] ERROR: Database dump is empty or missing!" >&2
-    exit 1
+    fail "Database dump is empty or missing"
 fi
 
 DB_SIZE=$(du -sh "${UPLOAD_LOCATION}/database-backup/immich-database.sql" | cut -f1)
