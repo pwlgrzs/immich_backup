@@ -6,13 +6,28 @@ START_TIME=$(date +%s)
 
 source /usr/local/bin/notify.sh
 
-trap 'FAILED_STEP="${BASH_COMMAND}"; \
-    END_TIME=$(date +%s); \
-    DURATION=$((END_TIME - START_TIME)); \
-    echo "[$(date)] ERROR: Backup failed at step: ${FAILED_STEP}"; \
+# Single failure path for both the ERR trap (unexpected command failure) and
+# explicit `fail` calls (checks that detected a problem). Guarded so it only
+# ever notifies once.
+FAILURE_NOTIFIED=0
+notify_failure() {
+    [ "${FAILURE_NOTIFIED}" -eq 1 ] && return
+    FAILURE_NOTIFIED=1
+    local failed_step="$1"
+    local now duration
+    now=$(date +%s)
+    duration=$((now - START_TIME))
+    echo "[$(date)] ERROR: Backup failed at step: ${failed_step}"
     telegram_notify "$(printf "<b>❌ Immich Backup FAILED</b>\n\n<b>Failed at:</b> <code>%s</code>\n<b>Duration:</b> %ss\n<b>Time:</b> %s" \
-        "${FAILED_STEP}" "${DURATION}" "$(date)")"; \
-    exit 1' ERR
+        "${failed_step}" "${duration}" "$(date)")"
+}
+
+fail() {
+    notify_failure "$1"
+    exit 1
+}
+
+trap 'notify_failure "${BASH_COMMAND}"; exit 1' ERR
 
 # Route to DB-only if FULL_BACKUP=0
 FULL_BACKUP=${FULL_BACKUP:-1}
@@ -43,8 +58,7 @@ PGPASSWORD="${DB_PASSWORD}" pg_dump \
 echo "[$(date)] Database dump complete."
 
 if [ ! -s "${UPLOAD_LOCATION}/database-backup/immich-database.sql" ]; then
-    echo "[$(date)] ERROR: Database dump is empty or missing!" >&2
-    exit 1
+    fail "Database dump is empty or missing"
 fi
 echo "[$(date)] Database dump integrity check passed."
 
@@ -57,6 +71,10 @@ if [ ! -d "${BACKUP_PATH}/immich-borg" ]; then
 fi
 
 echo "[$(date)] Creating Borg archive..."
+# borg exit codes: 0 = success, 1 = warning (e.g. a file changed or vanished
+# mid-read, which is normal on a live Immich upload dir), >=2 = error.
+# Temporarily disable set -e so a benign rc=1 doesn't abort the whole run.
+set +e
 BORG_OUTPUT=$(borg create \
     --compression zstd,3 \
     --lock-wait 60 \
@@ -66,8 +84,16 @@ BORG_OUTPUT=$(borg create \
     "${UPLOAD_LOCATION}" \
     --exclude "${UPLOAD_LOCATION}/thumbs/" \
     --exclude "${UPLOAD_LOCATION}/encoded-video/" 2>&1)
+BORG_RC=$?
+set -e
 
 echo "$BORG_OUTPUT"
+
+if [ "${BORG_RC}" -ge 2 ]; then
+    fail "borg create failed (rc=${BORG_RC})"
+elif [ "${BORG_RC}" -eq 1 ]; then
+    echo "[$(date)] WARNING: borg create completed with warnings (rc=1), continuing."
+fi
 
 echo "[$(date)] Verifying database dump in Borg archive..."
 LATEST_ARCHIVE=$(borg list --last 1 --short "${BACKUP_PATH}/immich-borg")
@@ -75,8 +101,7 @@ LATEST_ARCHIVE=$(borg list --last 1 --short "${BACKUP_PATH}/immich-borg")
 if borg list "${BACKUP_PATH}/immich-borg::${LATEST_ARCHIVE}" | grep -q "immich-database.sql"; then
     echo "[$(date)] Verification passed: immich-database.sql found in ${LATEST_ARCHIVE}."
 else
-    echo "[$(date)] ERROR: immich-database.sql NOT found in Borg archive!" >&2
-    exit 1
+    fail "immich-database.sql NOT found in Borg archive"
 fi
 
 # Build prune arguments dynamically
@@ -95,17 +120,36 @@ if [ -z "$PRUNE_ARGS" ]; then
     echo "[$(date)] WARNING: No prune rules defined, skipping prune step."
 else
     echo "[$(date)] Pruning Borg archives (daily=${KEEP_DAILY:-0} weekly=${KEEP_WEEKLY:-0} monthly=${KEEP_MONTHLY:-0})..."
+    set +e
     borg prune $PRUNE_ARGS "${BACKUP_PATH}/immich-borg"
+    PRUNE_RC=$?
+    set -e
+    if [ "${PRUNE_RC}" -ge 2 ]; then
+        fail "borg prune failed (rc=${PRUNE_RC})"
+    elif [ "${PRUNE_RC}" -eq 1 ]; then
+        echo "[$(date)] WARNING: borg prune completed with warnings (rc=1), continuing."
+    fi
 fi
 
 echo "[$(date)] Compacting Borg repository..."
+set +e
 borg compact "${BACKUP_PATH}/immich-borg"
+COMPACT_RC=$?
+set -e
+if [ "${COMPACT_RC}" -ge 2 ]; then
+    fail "borg compact failed (rc=${COMPACT_RC})"
+elif [ "${COMPACT_RC}" -eq 1 ]; then
+    echo "[$(date)] WARNING: borg compact completed with warnings (rc=1), continuing."
+fi
 
-BORG_INFO=$(borg info "${BACKUP_PATH}/immich-borg" 2>&1)
-REPO_ORIGINAL=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $3, $4}')
-REPO_COMPRESSED=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $5, $6}')
-REPO_DEDUP=$(echo "$BORG_INFO" | grep "All archives:" | awk '{print $7, $8}')
-ARCHIVE_COUNT=$(borg list --short "${BACKUP_PATH}/immich-borg" | wc -l | tr -d ' ')
+# Stats are best-effort: borg's "info" output format varies between versions,
+# so a missing line must not trigger the ERR trap after a successful backup.
+BORG_INFO=$(borg info "${BACKUP_PATH}/immich-borg" 2>&1 || true)
+REPO_LINE=$(echo "$BORG_INFO" | grep "All archives:" || true)
+REPO_ORIGINAL=$(echo "$REPO_LINE" | awk '{print $3, $4}')
+REPO_COMPRESSED=$(echo "$REPO_LINE" | awk '{print $5, $6}')
+REPO_DEDUP=$(echo "$REPO_LINE" | awk '{print $7, $8}')
+ARCHIVE_COUNT=$(borg list --short "${BACKUP_PATH}/immich-borg" 2>/dev/null | wc -l | tr -d ' ' || true)
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))

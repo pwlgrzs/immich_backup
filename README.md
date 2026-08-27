@@ -15,8 +15,8 @@ A lightweight Docker container that automates [Immich](https://immich.app/) back
 - Automatic pruning and compaction
 - Persistent Borg cache across container recreations
 - Log rotation (last 1000 lines retained)
-- Read-only upload mount for security
-- Telegram notifications on success and failure
+- Telegram notifications on success and failure (Borg warnings, e.g. a file
+  changing mid-backup, are logged but do not fail the run)
 - Excludes regeneratable data (`thumbs/`, `encoded-video/`)
 
 ## Requirements
@@ -111,9 +111,16 @@ docker compose exec immich-backup tail -f /var/log/backup.log
 
 ### Database
 
+The dump is a plain-text SQL script (`pg_dump` with `--clean --if-exists`). Restore
+it by streaming it straight into `psql` — it is **not** a custom-format archive, so
+pgAdmin's "Restore" dialog cannot import it:
+
 ```bash
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME < /path/to/immich-database.sql
 ```
+
+Stop Immich before restoring, and follow the Immich docs for your version if the
+restore complains about missing extensions (`vector` / `vectors` / `vchord`).
 
 ### Files
 
@@ -121,6 +128,29 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME < /path/to/immich-database.sql
 borg list $BACKUP_PATH/immich-borg
 borg extract $BACKUP_PATH/immich-borg::ARCHIVE_NAME
 ```
+
+## Troubleshooting
+
+### `Failed to create/acquire the lock` on every run
+
+If the container was killed mid-backup, Borg leaves a stale lock in the repo and
+subsequent runs wait `--lock-wait 60` and then fail. Clear it once the container
+is idle:
+
+```bash
+docker compose exec immich-backup borg break-lock "$BACKUP_PATH/immich-borg"
+```
+
+### Backup job never runs
+
+Check `docker compose logs immich-backup` for the printed crontab and
+`Cron schedule set to: ...` line. If `crond` exits, the container now exits with
+it (instead of sitting idle) so `restart: unless-stopped` restarts it.
+
+### Wrong timestamps in logs / notifications
+
+Set `TZ` in `.env` to a valid zoneinfo name (e.g. `Europe/Warsaw`). An unknown
+value logs a warning and falls back to UTC.
 
 ## :speech_balloon: Telegram Notifications
 
